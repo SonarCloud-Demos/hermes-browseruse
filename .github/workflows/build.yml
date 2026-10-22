@@ -27,7 +27,8 @@ jobs:
       - name: Install browser-agent dependencies
         # requirements-ci.lock = requirements.txt + aiohttp (provided by OpenWebUI at
         # runtime, needed here to import the pipe), resolved with hashes.
-        run: pip install --require-hashes --only-binary :all: -r browser-agent/requirements-ci.lock
+        run: |
+          pip install --require-hashes --only-binary :all: -r browser-agent/requirements-ci.lock
 
       - name: Compile Python sources
         run: python -m py_compile browser-agent/server.py browser-agent/owui_function.py
@@ -50,7 +51,7 @@ jobs:
           ANTHROPIC_API_KEY: ""
         run: |
           uvicorn server:app --port 8000 &
-          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 1; done
+          for _ in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 1; done
           curl -fs localhost:8000/health | grep -q '"status":"ok"'
           # Missing key must be reported as a visible failure, not an exception.
           curl -fs localhost:8000/run_task -H 'Content-Type: application/json' \

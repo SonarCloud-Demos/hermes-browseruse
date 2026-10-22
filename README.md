@@ -128,7 +128,7 @@ The Dockerfile then trusts it for Python, Node (Playwright) and Chromium (NSS).
 
 ## Deviations from the original spec
 
-Changes made on purpose to reach the acceptance criterion, and why:
+The original task prompt is in [PROMPT.md](PROMPT.md). Changes made on purpose to reach the acceptance criterion, and why:
 
 | Spec said | Implemented | Why |
 |---|---|---|

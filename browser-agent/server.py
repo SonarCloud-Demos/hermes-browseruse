@@ -91,7 +91,7 @@ def build_llm():
     return None, f"Unknown BROWSER_AGENT_LLM={backend!r}; use anthropic, portkey or ollama. {RESTART_HINT}"
 
 
-@app.post("/run_task", response_model=TaskResponse)
+@app.post("/run_task")
 async def run_task(req: TaskRequest) -> TaskResponse:
     llm, error = build_llm()
     if error:

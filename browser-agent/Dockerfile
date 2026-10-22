@@ -10,13 +10,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     ANONYMIZED_TELEMETRY=false \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
+# Unprivileged runtime user; Chromium reads its NSS trust store from $HOME/.pki.
+RUN useradd --create-home --uid 1000 app
+
 COPY --from=extra-ca / /usr/local/share/ca-certificates/extra/
 RUN if ls /usr/local/share/ca-certificates/extra/*.crt >/dev/null 2>&1; then \
         apt-get update && apt-get install -y --no-install-recommends ca-certificates libnss3-tools \
         && update-ca-certificates \
-        && mkdir -p /root/.pki/nssdb && certutil -d sql:/root/.pki/nssdb -N --empty-password \
+        && mkdir -p /home/app/.pki/nssdb && certutil -d sql:/home/app/.pki/nssdb -N --empty-password \
         && for c in /usr/local/share/ca-certificates/extra/*.crt; do \
-             certutil -d sql:/root/.pki/nssdb -A -t "C,," -n "$(basename "$c")" -i "$c"; done \
+             certutil -d sql:/home/app/.pki/nssdb -A -t "C,," -n "$(basename "$c")" -i "$c"; done \
+        && chown -R app:app /home/app/.pki \
         && rm -rf /var/lib/apt/lists/*; \
     fi
 
@@ -27,11 +31,15 @@ ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt \
+# requirements.lock: requirements.txt resolved with hashes
+# (uv pip compile requirements.txt --universal --python-version 3.12 --generate-hashes -o requirements.lock)
+COPY requirements.lock .
+RUN pip install --no-cache-dir --require-hashes --only-binary :all: -r requirements.lock \
     && playwright install --with-deps chromium
 
 COPY server.py .
+
+USER app
 
 EXPOSE 8000
 

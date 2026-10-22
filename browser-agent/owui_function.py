@@ -52,15 +52,16 @@ class Pipe:
         await status("Browser agent is working on the task…", False)
         try:
             timeout = aiohttp.ClientTimeout(total=self.valves.TIMEOUT_SECONDS)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.post(
-                    url, json={"task": task, "max_steps": self.valves.MAX_STEPS}
-                ) as resp:
-                    if resp.status != 200:
-                        text = await resp.text()
-                        await status("Browser agent request failed", True)
-                        return f"❌ BrowserUse-Opus: browser-agent returned HTTP {resp.status}:\n\n{text}"
-                    data = await resp.json()
+            payload = {"task": task, "max_steps": self.valves.MAX_STEPS}
+            async with (
+                aiohttp.ClientSession(timeout=timeout) as session,
+                session.post(url, json=payload) as resp,
+            ):
+                if resp.status != 200:
+                    text = await resp.text()
+                    await status("Browser agent request failed", True)
+                    return f"❌ BrowserUse-Opus: browser-agent returned HTTP {resp.status}:\n\n{text}"
+                data = await resp.json()
         except Exception as exc:
             await status("Browser agent unreachable", True)
             return f"❌ BrowserUse-Opus: could not reach {url}: {type(exc).__name__}: {exc}"

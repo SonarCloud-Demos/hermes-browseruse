@@ -1,0 +1,79 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: browser-agent/requirements.txt
+
+      - name: Install browser-agent dependencies
+        # aiohttp is provided by OpenWebUI at runtime; needed here to import the pipe.
+        run: pip install -r browser-agent/requirements.txt aiohttp
+
+      - name: Compile Python sources
+        run: python -m py_compile browser-agent/server.py browser-agent/owui_function.py
+
+      - name: Smoke test OpenWebUI pipe
+        working-directory: browser-agent
+        run: |
+          python - <<'PY'
+          from owui_function import Pipe
+          assert Pipe().pipes() == [{"id": "browseruse-opus", "name": "BrowserUse-Opus"}]
+          assert Pipe().valves.BROWSER_AGENT_URL == "http://browser-agent:8000"
+          print("pipe OK")
+          PY
+
+      - name: Smoke test browser-agent API (no LLM, no browser)
+        working-directory: browser-agent
+        env:
+          ANONYMIZED_TELEMETRY: "false"
+          BROWSER_AGENT_LLM: anthropic
+          ANTHROPIC_API_KEY: ""
+        run: |
+          uvicorn server:app --port 8000 &
+          for i in $(seq 1 30); do curl -fs localhost:8000/health && break; sleep 1; done
+          curl -fs localhost:8000/health | grep -q '"status":"ok"'
+          # Missing key must be reported as a visible failure, not an exception.
+          curl -fs localhost:8000/run_task -H 'Content-Type: application/json' \
+            -d '{"task": "noop", "max_steps": 1}' | tee /tmp/run.json
+          grep -q '"success":false' /tmp/run.json
+          grep -q 'ANTHROPIC_API_KEY is not set' /tmp/run.json
+
+      - name: Validate docker-compose.yml
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Build browser-agent image
+        run: docker compose build browser-agent
+
+  sonarqube:
+    name: SonarQube Cloud analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

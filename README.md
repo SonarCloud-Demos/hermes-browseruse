@@ -1,5 +1,10 @@
 # hermes-browseruse
 
+[![Build](https://github.com/SonarCloud-Demos/hermes-browseruse/actions/workflows/build.yml/badge.svg)](https://github.com/SonarCloud-Demos/hermes-browseruse/actions/workflows/build.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=SonarCloud-Demos_hermes-browseruse&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=SonarCloud-Demos_hermes-browseruse)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Buy me a coffee](https://img.shields.io/badge/Buy%20me-a%20coffee-ff5f5f?logo=ko-fi&logoColor=white)](https://ko-fi.com/mathiasconradt)
+
 Local stack with two chat models in **OpenWebUI**:
 
 | Model in dropdown | What it is |

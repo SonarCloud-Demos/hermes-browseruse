@@ -1,0 +1,80 @@
+name: hermes-browseruse
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    restart: unless-stopped
+    networks: [hermes-net]
+
+  # One-off: pulls Nous Research Hermes 3 8B into the ollama volume, then exits.
+  ollama-pull:
+    image: ollama/ollama
+    container_name: ollama-pull
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["ollama"]
+    command: ["pull", "hermes3:8b"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    networks: [hermes-net]
+
+  browser-agent:
+    build: ./browser-agent
+    container_name: browser-agent
+    env_file: .env
+    shm_size: "1gb"
+    restart: unless-stopped
+    networks: [hermes-net]
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: openwebui
+    ports:
+      - "3000:8080"
+    volumes:
+      - openwebui-data:/app/backend/data
+      - ./browser-agent/owui_function.py:/app/browseruse_function.py:ro
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      # Single-user mode: no sign-up/login step, user is admin.
+      - WEBUI_AUTH=False
+      - ENABLE_OPENAI_API=False
+    # Start OpenWebUI as usual and, in the background, auto-register the
+    # BrowserUse-Opus pipe function (no manual import in the UI needed).
+    entrypoint: ["bash", "-c"]
+    command:
+      - "python /app/browseruse_function.py --register & exec bash /app/backend/start.sh"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    depends_on:
+      ollama:
+        condition: service_healthy
+      browser-agent:
+        condition: service_started
+    restart: unless-stopped
+    networks: [hermes-net]
+
+networks:
+  hermes-net:
+    name: hermes-net
+
+volumes:
+  openwebui-data:
+  ollama-data:

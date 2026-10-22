@@ -1,0 +1,9 @@
+browser-use==0.1.40
+fastapi
+uvicorn[standard]
+playwright
+anthropic
+pydantic
+# browser-use 0.1.40 imports google.api_core in its step error handler; without it
+# every LLM error (auth, rate limit, network) is silently swallowed.
+google-api-core

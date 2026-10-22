@@ -1,0 +1,23 @@
+# Secrets – real keys live only in .env (template: .env.example)
+.env
+.env.*
+!.env.example
+
+# Machine-local adjustments (TLS-inspecting proxy CA, DNS workaround) – see README
+docker-compose.override.yml
+.local-ca/
+*.crt
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -151,6 +151,27 @@ Machine-local only (not part of the deliverable, delete on other machines):
 `browser-agent` public DNS (`1.1.1.1`, `8.8.8.8`) because this host's `/etc/hosts` maps
 `example.com` to `127.0.0.1`, which Docker Desktop passes into containers.
 
+## Known dependency findings
+
+SonarQube Cloud's dependency analysis (SCA) reports these known vulnerabilities. They are
+**not upgraded on purpose**: [PROMPT.md](PROMPT.md) pins `browser-use==0.1.40`, and every
+affected package is either that pin or locked by it. No patched release exists within the
+versions it allows.
+
+| Package (locked) | CVE | Fixed in | Why it can't be upgraded |
+|---|---|---|---|
+| browser-use 0.1.40 | CVE-2025-47241 – `allowed_domains` bypass via the user-info part of a URL | 0.1.45 | Pinned to exactly `0.1.40` by the spec |
+| langchain-anthropic 0.3.3 | CVE-2026-55443 – path traversal in file-search middleware / loaders | 1.3.9 / 1.4.6 | browser-use 0.1.40 requires `langchain-anthropic==0.3.3` |
+| langchain-core 0.3.86 | CVE-2026-34070 – path traversal in legacy `load_prompt` | 1.2.22 | langchain-anthropic 0.3.3 requires `langchain-core<0.4`; 0.3.86 is the newest 0.3.x |
+| langchain-core 0.3.86 | CVE-2026-26013 – SSRF via image token counting in `ChatOpenAI` | 1.2.11 | same as above |
+| langchain-openai 0.3.1 | CVE-2026-41488 – DNS-rebinding bypass of the image token counting SSRF protection | 1.1.14 | browser-use 0.1.40 requires `langchain-openai==0.3.1` |
+
+Based on the advisories, the affected features are not used by this project: `allowed_domains`
+is never set, `load_prompt` and the LangChain file-search middleware / loaders are not called,
+and `ChatOpenAI` is not used (only `ChatAnthropic` and `ChatOllama`). Clearing all findings
+requires a much newer browser-use that no longer uses LangChain – a breaking API change that
+contradicts the spec.
+
 ## Notes
 
 - Data persists in the named volumes `openwebui-data` and `ollama-data`

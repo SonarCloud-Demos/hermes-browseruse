@@ -178,3 +178,8 @@ contradicts the spec.
   (`docker compose down -v` deletes them, including the downloaded model).
 - `WEBUI_AUTH=False` is meant for a local, single-user machine. Don't expose port 3000 publicly.
 - Hermes 3 8B runs on CPU inside Docker on macOS (no Metal GPU passthrough); expect a few tokens/s.
+- Host ports are set in `.env`: `OPENWEBUI_PORT` (default `3000`) and `OLLAMA_PORT` (default `11434`).
+  Change them if another app already uses a port (e.g. a dev server on 3000, or the native Ollama
+  app, which also listens on 11434), then run `docker compose up -d`. Services reach each other over
+  the internal Docker network, so nothing else needs to change. The container names
+  (`ollama`, `openwebui`, `browser-agent`, `ollama-pull`) are fixed and must not clash with other containers.
